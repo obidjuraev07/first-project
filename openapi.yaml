@@ -1,0 +1,56 @@
+  /reports/{id}/summary-stats/:
+    get:
+      summary: Get summary statistics for a report
+      tags: [Reports]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Summary statistics for the report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  monthly_reach_thousands:
+                    type: number
+                    example: 1.055
+                  monthly_reach_percent:
+                    type: number
+                    example: 100.0
+                  avg_daily_reach_thousands:
+                    type: number
+                    example: 1.1
+                  avg_daily_reach_percent:
+                    type: number
+                    example: 100.0
+              example:
+                monthly_reach_thousands: 1.055
+                monthly_reach_percent: 100.0
+                avg_daily_reach_thousands: 1.1
+                avg_daily_reach_percent: 100.0
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "invalid_token"
+                  error_description:
+                    type: string
+                    example: "The access token is invalid or expired."
+      x-codeSamples:
+        - lang: curl
+          label: Get Report Summary Stats Example
+          source: |
+            curl -X GET "{{base_url}}/clickstream/api/v1/reports/123/summary-stats/" \
+              -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
