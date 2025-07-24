@@ -1,5 +1,3 @@
-import pandas as pd
-import numpy as np
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -80,41 +78,44 @@ class ClickHouseCumulativeReachView(APIView):
         client = get_client(**settings.CLICKHOUSE_CONFIG)
         result = client.query(query)
 
-        # Convert result to pandas DataFrame for easier manipulation
-        df = pd.DataFrame(result.result_rows, columns=['platform', 'user_count', 'reach_percent'])
+        # Convert result to list of dictionaries for easier manipulation
+        platforms_data = []
+        for row in result.result_rows:
+            platform, user_count, reach_percent = row
+            platforms_data.append({
+                'platform': platform,
+                'user_count': user_count,
+                'reach_percent': reach_percent
+            })
         
-        if df.empty:
+        if not platforms_data:
             return Response([])
 
         # Convert reach percentages to fractions (divide by 100)
-        reach_fractions = df['reach_percent'] / 100.0
+        reach_fractions = [data['reach_percent'] / 100.0 for data in platforms_data]
         
         # Calculate probability that a person was NOT reached by any platform
         # Using the formula: P(not reached) = (1 - r1) * (1 - r2) * (1 - r3) * ...
-        prob_not_reached = np.prod(1 - reach_fractions)
+        prob_not_reached = 1.0
+        for fraction in reach_fractions:
+            prob_not_reached *= (1 - fraction)
         
         # Calculate cumulative reach: 1 - P(not reached)
         cumulative_reach_percent = (1 - prob_not_reached) * 100.0
         
         # Calculate cumulative user count based on total population
-        total_pop = df['user_count'].iloc[0] / (df['reach_percent'].iloc[0] / 100.0) if not df.empty else 0
+        # Use the first platform's data to calculate total population
+        first_platform = platforms_data[0]
+        total_pop = first_platform['user_count'] / (first_platform['reach_percent'] / 100.0)
         cumulative_user_count = int(cumulative_reach_percent * total_pop / 100.0)
 
         # Format response for frontend
         response = []
-        for idx, row in df.iterrows():
-            platform = row['platform']
-            user_count = row['user_count']
-            reach_percent = row['reach_percent']
+        for data in platforms_data:
+            platform = data['platform']
+            user_count = data['user_count']
+            reach_percent = data['reach_percent']
             
-            # For label: e.g. "20% - 5M"
-            if user_count >= 1_000_000:
-                label = f"{reach_percent}% - {round(user_count / 1_000_000, 1)}M"
-            elif user_count >= 1_000:
-                label = f"{reach_percent}% - {round(user_count / 1_000, 1)}K"
-            else:
-                label = f"{reach_percent}% - {user_count}"
-                
             response.append({
                 "platform": platform,
                 "percent": reach_percent,
