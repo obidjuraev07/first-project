@@ -240,6 +240,37 @@ def create_merged_dataset():
     
     return merged_data
 
+def add_district_id_to_merged_csv():
+    """Add a district_id column to merged_district_data.csv using the reference file mapping."""
+    import csv
+    merged_file = 'merged_district_data.csv'
+    ref_file = 'reference_district_202508071730.csv'
+    output_file = 'merged_district_data_with_id.csv'
+
+    # Load reference mapping: name_uz -> id
+    ref_map = {}
+    with open(ref_file, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            ref_map[row['name_uz']] = row['id']
+
+    # Read merged file and add district_id
+    with open(merged_file, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+        fieldnames = reader.fieldnames + ['district_id']
+
+    for row in rows:
+        ref_name_uz = row.get('ref_name_uz', '')
+        row['district_id'] = ref_map.get(ref_name_uz, '')
+
+    # Write new file
+    with open(output_file, 'w', encoding='utf-8', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"Added district_id to merged CSV: {output_file}")
+
 if __name__ == "__main__":
     print("DISTRICT MATCHING ANALYSIS")
     print("="*80)
@@ -249,6 +280,9 @@ if __name__ == "__main__":
     
     # Create merged dataset
     merged_df = create_merged_dataset()
+    
+    # Add district_id to merged CSV
+    add_district_id_to_merged_csv()
     
     print("\n" + "="*80)
     print("ANALYSIS COMPLETE")
