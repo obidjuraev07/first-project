@@ -45,6 +45,9 @@ def create_population_by_gender_age_csv(merged_file, ref_file, output_file):
     output_rows = []
     next_id = 1
     for row in rows:
+        # Filter for year 2025 only
+        if row.get('Year', '') != '2025':
+            continue
         district_id = row.get('district_id', '')
         region_id = row.get('ref_region_id', '')
         district_name_en = row.get('ref_name_en', '')
